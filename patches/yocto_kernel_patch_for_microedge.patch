@@ -1,0 +1,111 @@
+diff --git a/meta-yocto-bsp/conf/machine/beaglebone-yocto.conf b/meta-yocto-bsp/conf/machine/beaglebone-yocto.conf
+index 284559c50c..e2491cfdfc 100644
+--- a/meta-yocto-bsp/conf/machine/beaglebone-yocto.conf
++++ b/meta-yocto-bsp/conf/machine/beaglebone-yocto.conf
+@@ -27,7 +27,7 @@ PREFERRED_PROVIDER_virtual/kernel ?= "linux-yocto"
+ PREFERRED_VERSION_linux-yocto ?= "5.15%"
+ 
+ KERNEL_IMAGETYPE = "zImage"
+-KERNEL_DEVICETREE = "am335x-bone.dtb am335x-boneblack.dtb am335x-bonegreen.dtb"
++KERNEL_DEVICETREE = "am335x-sancloud-bbe-lite.dtb am335x-sancloud-bbe.dtb am335x-bone.dtb am335x-boneblack.dtb am335x-bonegreen.dtb"
+ KERNEL_EXTRA_ARGS += "LOADADDR=${UBOOT_ENTRYPOINT}"
+ 
+ PREFERRED_PROVIDER_virtual/bootloader ?= "u-boot"
+diff --git a/meta/recipes-extended/images/core-image-full-cmdline.bb b/meta/recipes-extended/images/core-image-full-cmdline.bb
+index 4d69073d9d..25a013ac07 100644
+--- a/meta/recipes-extended/images/core-image-full-cmdline.bb
++++ b/meta/recipes-extended/images/core-image-full-cmdline.bb
+@@ -6,6 +6,7 @@ IMAGE_FEATURES += "splash ssh-server-openssh"
+ IMAGE_INSTALL = "\
+     packagegroup-core-boot \
+     packagegroup-core-full-cmdline \
++    packagegroup-core-buildessential \
+     ${CORE_IMAGE_EXTRA_INSTALL} \
+     "
+ 
+diff --git a/meta/recipes-kernel/linux/files/cpsw-switch-netns.patch b/meta/recipes-kernel/linux/files/cpsw-switch-netns.patch
+new file mode 100644
+index 0000000000..3e77fdcb6f
+--- /dev/null
++++ b/meta/recipes-kernel/linux/files/cpsw-switch-netns.patch
+@@ -0,0 +1,21 @@
++commit 23aee5f46a0a6d391254f8aab3833849c6d6103e
++Author: invalid_git config <unknown@unknown>
++Date:   Wed Dec 7 21:04:22 2022 +0000
++
++Fix up local-netns feature
++    
++Upstream-Status: Pending
++
++diff --git a/drivers/net/ethernet/ti/cpsw_new.c b/drivers/net/ethernet/ti/cpsw_new.c
++index 277c91d13570..22d9f48381b2 100644
++--- a/drivers/net/ethernet/ti/cpsw_new.c
+++++ b/drivers/net/ethernet/ti/cpsw_new.c
++@@ -1410,7 +1410,7 @@ static int cpsw_create_ports(struct cpsw_common *cpsw)
++ 		cpsw->slaves[i].ndev = ndev;
++ 
++ 		ndev->features |= NETIF_F_HW_VLAN_CTAG_FILTER |
++-				  NETIF_F_HW_VLAN_CTAG_RX | NETIF_F_NETNS_LOCAL;
+++				  NETIF_F_HW_VLAN_CTAG_RX;
++ 
++ 		ndev->netdev_ops = &cpsw_netdev_ops;
++ 		ndev->ethtool_ops = &cpsw_ethtool_ops;
+diff --git a/meta/recipes-kernel/linux/files/privafy.cfg b/meta/recipes-kernel/linux/files/privafy.cfg
+new file mode 100644
+index 0000000000..e03b0eb877
+--- /dev/null
++++ b/meta/recipes-kernel/linux/files/privafy.cfg
+@@ -0,0 +1,33 @@
++CONFIG_NETLINK_DIAG=y
++CONFIG_SPI_SPIDEV=y
++CONFIG_NAMESPACES=y
++CONFIG_UTS_NS=y
++CONFIG_TIME_NS=y
++CONFIG_IPC_NS=y
++CONFIG_USER_NS=y
++CONFIG_PID_NS=y
++CONFIG_NET_NS=y
++CONFIG_XFRM=y
++CONFIG_XFRM_INTERFACE=y
++CONFIG_XFRM_OFFLOAD=y
++CONFIG_XFRM_ALGO=y
++CONFIG_XFRM_USER=y
++CONFIG_XFRM_USER_COMPAT=y
++CONFIG_XFRM_SUB_POLICY=y
++CONFIG_XFRM_MIGRATE=y
++CONFIG_XFRM_STATISTICS=y
++CONFIG_XFRM_AH=y
++CONFIG_XFRM_ESP=y
++CONFIG_XFRM_IPCOMP=y
++CONFIG_NET_KEY=y
++CONFIG_NET_KEY_MIGRATE=y
++CONFIG_XFRM_ESPINTCP=y
++CONFIG_INET_XFRM_TUNNEL=y
++CONFIG_INET6_XFRM_TUNNEL=y
++CONFIG_CRYPTO_USER=y
++CONFIG_ARM_CRYPTO=y
++CONFIG_CRYPTO_SHA3=y
++CONFIG_CRYPTO_USER_API=y
++CONFIG_CRYPTO_USER_API_HASH=y
++CONFIG_CRYPTO_USER_API_SKCIPHER=y
++CONFIG_CRYPTO_USER_API_AEAD=y
++CONFIG_EXPERT=y
++CONFIG_GPIO_SYSFS=y
++CONFIG_GPIO_AGGREGATOR=y
++CONFIG_GPIO_VIRTIO=y
+diff --git a/meta/recipes-kernel/linux/linux-yocto_5.15.bb b/meta/recipes-kernel/linux/linux-yocto_5.15.bb
+index 792cf41a53..2228be7508 100644
+--- a/meta/recipes-kernel/linux/linux-yocto_5.15.bb
++++ b/meta/recipes-kernel/linux/linux-yocto_5.15.bb
+@@ -37,6 +37,11 @@ KBRANCH:class-devupstream = "v5.15/base"
+ SRC_URI = "git://git.yoctoproject.org/linux-yocto.git;name=machine;branch=${KBRANCH}; \
+            git://git.yoctoproject.org/yocto-kernel-cache;type=kmeta;name=meta;branch=yocto-5.15;destsuffix=${KMETA}"
+ 
++SRC_URI:append = " \
++	file://privafy.cfg \
++	file://cpsw-switch-netns.patch \
++"
++
+ LIC_FILES_CHKSUM = "file://COPYING;md5=6bc538ed5bd9a7fc9398086aedcd7e46"
+ LINUX_VERSION ?= "5.15.72"
+ 
